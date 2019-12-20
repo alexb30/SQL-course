@@ -1,0 +1,31 @@
+SELECT 
+  new.day,
+  new.new_users_added,
+  COALESCE(deleted.deleted_users,0) AS deleted_users,
+  COALESCE(merged.merged_users,0) as merged_users,
+  (new.new_users_added - COALESCE(deleted.deleted_users,0) - COALESCE(merged.merged_users,0)) as Net_added_users
+FROM
+  (SELECT
+    date(created_at) as day,
+    COUNT(*) as new_users_added
+  FROM dsv1069.users 
+  WHERE parent_user_id <> id and parent_user_id IS NOT NULL
+  GROUP BY day) new
+LEFT JOIN
+  (SELECT
+      date(deleted_at) as DelDay,
+      COUNT(*) as deleted_users
+  FROM dsv1069.users 
+  WHERE parent_user_id <> id and deleted_at IS NOT NULL
+  GROUP BY DelDay) deleted
+ON
+  deleted.delday = new.day
+JOIN
+ (SELECT
+    date(merged_at) as day,
+    COUNT(*) as merged_users
+  FROM dsv1069.users 
+  WHERE parent_user_id <> id and deleted_at IS NULL
+  GROUP BY day) merged
+ON
+  merged.day = new.day
